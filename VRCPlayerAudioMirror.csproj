@@ -66,6 +66,7 @@
     <Compile Include="AudioMirrorFilter.cs" />
     <Compile Include="PlayerAudioMirror.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WavWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
