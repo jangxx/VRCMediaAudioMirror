@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Reflection;
 using MelonLoader;
 using UnityEngine;
 using VRC;
 using UnhollowerRuntimeLib;
+using NAudio.Wave;
 
 namespace VRCPlayerAudioMirror
 {
@@ -24,10 +26,55 @@ namespace VRCPlayerAudioMirror
         private int ticksSinceLastUpdate = 0;
         private ISet<int> mirroredObjectIds = new HashSet<int>();
 
+        //private BufferedWaveProvider waveProvider;
+
         public override void OnApplicationStart()
         {
             ClassInjector.RegisterTypeInIl2Cpp<AudioMirrorFilter>();
+
+            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.dll"))
+            //{
+            //    byte[] assemblyData = new byte[stream.Length];
+            //    stream.Read(assemblyData, 0, assemblyData.Length);
+            //    System.Reflection.Assembly.Load(assemblyData);
+            //}
+            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.Core.dll"))
+            //{
+            //    byte[] assemblyData = new byte[stream.Length];
+            //    stream.Read(assemblyData, 0, assemblyData.Length);
+            //    System.Reflection.Assembly.Load(assemblyData);
+            //}
+            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.Wasapi.dll"))
+            //{
+            //    byte[] assemblyData = new byte[stream.Length];
+            //    stream.Read(assemblyData, 0, assemblyData.Length);
+            //    System.Reflection.Assembly.Load(assemblyData);
+            //}
+            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.WinMM.dll"))
+            //{
+            //    byte[] assemblyData = new byte[stream.Length];
+            //    stream.Read(assemblyData, 0, assemblyData.Length);
+            //    System.Reflection.Assembly.Load(assemblyData);
+            //}
+
+            //AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+            //TestNAudioStuff();
         }
+
+        //public void TestNAudioStuff()
+        //{
+        //    var waveFormat = new WaveFormat(48000, 16, 2);
+        //    var waveProvider = new BufferedWaveProvider(waveFormat);
+        //    WaveFileWriter.CreateWaveFile(DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".wav", waveProvider);
+        //}
+
+        //private System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        //{
+        //    //using (var assembly = Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.dll"))
+        //    LoggerInstance.Msg("Trying to resolve " + args.Name);
+
+        //    throw new NotImplementedException();
+        //}
 
         //public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         //{
@@ -84,7 +131,7 @@ namespace VRCPlayerAudioMirror
                 //this.audioSources = new List<AudioSource>();
 
                 var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
-                MelonLogger.Msg("Found " + players.Length + " speakers");
+                LoggerInstance.Msg("Found " + players.Length + " speakers");
 
                 int count = 0;
 
@@ -94,7 +141,7 @@ namespace VRCPlayerAudioMirror
 
                     if (source != null && source.gameObject != null && source.isPlaying && !this.mirroredObjectIds.Contains(source.gameObject.GetInstanceID()))
                     {
-                        MelonLogger.Msg("Found AudioSource");
+                        LoggerInstance.Msg("Found AudioSource");
                         //this.audioSources.Add(source);
                         //break;
                         source.gameObject.AddComponent<AudioMirrorFilter>();
@@ -105,7 +152,7 @@ namespace VRCPlayerAudioMirror
                 }
 
                 //MelonLogger.Msg("Updated " + this.audioSources.Count + " audio sources");
-                MelonLogger.Msg("Updated " + count + " audio sources");
+                LoggerInstance.Msg("Updated " + count + " audio sources");
             }
 
             if (Input.GetKey(KeyCode.L))
