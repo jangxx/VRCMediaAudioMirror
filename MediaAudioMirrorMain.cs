@@ -11,9 +11,9 @@ using UnhollowerRuntimeLib;
 using NAudio.Wave;
 using UIExpansionKit;
 
-namespace VRCPlayerAudioMirror
+namespace VRCMediaAudioMirror
 {
-    public class PlayerAudioMirror : MelonMod
+    public class MediaAudioMirrorMain : MelonMod
     {
         private const int MAX_RETRIES = 10;
 
@@ -31,7 +31,7 @@ namespace VRCPlayerAudioMirror
 
         private QuickMenuSettings settingsUi = new QuickMenuSettings();
 
-        public PlayerAudioMirror()
+        public MediaAudioMirrorMain()
         {
             //this.waveOutEvent = new WaveOutEvent() {  DesiredLatency = 100 };
             this.globalMixer = new MixingWaveProvider16();

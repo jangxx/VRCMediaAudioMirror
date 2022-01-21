@@ -4,7 +4,7 @@ using MelonLoader;
 using System.Collections.Generic;
 using NAudio.Wave;
 
-namespace VRCPlayerAudioMirror
+namespace VRCMediaAudioMirror
 {
     public class OutputDeviceEntry : Tuple<int, string>
     {

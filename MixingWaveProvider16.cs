@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using NAudio.Wave;
 using MelonLoader;
 
-namespace VRCPlayerAudioMirror
+namespace VRCMediaAudioMirror
 {
     /// <summary>
     /// WaveProvider that mixes together one or more 16 bit integer streams

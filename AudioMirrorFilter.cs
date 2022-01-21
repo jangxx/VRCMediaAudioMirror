@@ -4,7 +4,7 @@ using MelonLoader;
 using UnhollowerBaseLib;
 using NAudio.Wave;
 
-namespace VRCPlayerAudioMirror
+namespace VRCMediaAudioMirror
 {
     public class AudioMirrorFilter : MonoBehaviour
     {

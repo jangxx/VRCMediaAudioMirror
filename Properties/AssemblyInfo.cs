@@ -6,11 +6,11 @@ using MelonLoader;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("VRCPlayerAudioMirror")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("MediaAudioMirror")]
+[assembly: AssemblyDescription("Mirrors audio from players to another audio device")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("VRCPlayerAudioMirror")]
+[assembly: AssemblyProduct("Media Audio Mirror")]
 [assembly: AssemblyCopyright("Copyright ©  2022")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -36,5 +36,5 @@ using MelonLoader;
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
-[assembly: MelonInfo(typeof(VRCPlayerAudioMirror.PlayerAudioMirror), "Player Audio Mirror", "0.0.1", "jangxx")]
+[assembly: MelonInfo(typeof(VRCMediaAudioMirror.MediaAudioMirrorMain), "Media Audio Mirror", "1.0.0", "jangxx")]
 [assembly: MelonGame("VRChat", "VRChat")]
