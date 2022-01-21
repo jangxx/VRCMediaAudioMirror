@@ -9,129 +9,139 @@ using UnityEngine;
 using VRC;
 using UnhollowerRuntimeLib;
 using NAudio.Wave;
+using UIExpansionKit;
 
 namespace VRCPlayerAudioMirror
 {
     public class PlayerAudioMirror : MelonMod
     {
-        //public override void OnUpdate()
-        //{
-        //    if (Input.GetKeyDown(KeyCode.T))
-        //    {
-        //        MelonLogger.Msg("Hello World");
-        //    }
-        //}
+        private const int MAX_RETRIES = 10;
 
-        //private List<AudioSource> audioSources = new List<AudioSource>();
         private int ticksSinceLastUpdate = 0;
+        // in the beginning were gonna try to get the player more frequently for a few attempts
+        // and then drop the check frequency way down
+        private int getPlayerRetries = 0;
         private ISet<int> mirroredObjectIds = new HashSet<int>();
 
-        //private BufferedWaveProvider waveProvider;
+        private float pref_Volume = 1;
+
+        private WaveOutEvent waveOutEvent;
+        private MixingWaveProvider16 globalMixer;
+        private bool isEnabled = false;
+
+        private QuickMenuSettings settingsUi = new QuickMenuSettings();
+
+        public PlayerAudioMirror()
+        {
+            //this.waveOutEvent = new WaveOutEvent() {  DesiredLatency = 100 };
+            this.globalMixer = new MixingWaveProvider16();
+
+            //this.waveOutEvent.Init(this.globalMixer);
+        }
 
         public override void OnApplicationStart()
         {
             ClassInjector.RegisterTypeInIl2Cpp<AudioMirrorFilter>();
 
-            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.dll"))
-            //{
-            //    byte[] assemblyData = new byte[stream.Length];
-            //    stream.Read(assemblyData, 0, assemblyData.Length);
-            //    System.Reflection.Assembly.Load(assemblyData);
-            //}
-            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.Core.dll"))
-            //{
-            //    byte[] assemblyData = new byte[stream.Length];
-            //    stream.Read(assemblyData, 0, assemblyData.Length);
-            //    System.Reflection.Assembly.Load(assemblyData);
-            //}
-            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.Wasapi.dll"))
-            //{
-            //    byte[] assemblyData = new byte[stream.Length];
-            //    stream.Read(assemblyData, 0, assemblyData.Length);
-            //    System.Reflection.Assembly.Load(assemblyData);
-            //}
-            //using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.WinMM.dll"))
-            //{
-            //    byte[] assemblyData = new byte[stream.Length];
-            //    stream.Read(assemblyData, 0, assemblyData.Length);
-            //    System.Reflection.Assembly.Load(assemblyData);
-            //}
+            MelonPreferences.CreateCategory("PlayerAudioMirror", "Player Audio Mirror");
+            MelonPreferences.CreateEntry<float>("PlayerAudioMirror", "Volume", 1f, "Volume (0.0-1.0)");
 
-            //AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-            //TestNAudioStuff();
+            this.settingsUi.AudioDeviceChangedEvent += OnAudioDeviceChanged;
+            this.settingsUi.Init();
+
+            OnPreferencesSaved(); // load preferences on initialization
+
+            //this.waveOutEvent.Play();
         }
 
-        //public void TestNAudioStuff()
-        //{
-        //    var waveFormat = new WaveFormat(48000, 16, 2);
-        //    var waveProvider = new BufferedWaveProvider(waveFormat);
-        //    WaveFileWriter.CreateWaveFile(DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".wav", waveProvider);
-        //}
+        public override void OnPreferencesSaved()
+        {
+            pref_Volume = MelonPreferences.GetEntryValue<float>("PlayerAudioMirror", "Volume");
+            if (this.waveOutEvent != null)
+            {
+                this.waveOutEvent.Volume = Math.Max(0, Math.Min(1, pref_Volume));
+            }
+        }
 
-        //private System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        //{
-        //    //using (var assembly = Assembly.GetExecutingAssembly().GetManifestResourceStream("VRCPlayerAudioMirror.NAudio.dll"))
-        //    LoggerInstance.Msg("Trying to resolve " + args.Name);
+        public void OnAudioDeviceChanged(object sender, EventArgs args)
+        {
+            var audioEventArgs = (AudioDeviceChangedEventArgs)args;
 
-        //    throw new NotImplementedException();
-        //}
+            if (this.waveOutEvent != null)
+            {
+                this.waveOutEvent.Stop();
+                this.waveOutEvent.Dispose();
+            }
 
-        //public override void OnSceneWasLoaded(int buildIndex, string sceneName)
-        //{
-        //    MelonLogger.Msg("Scene " + buildIndex + " was LOADED with name " + sceneName);
-        //    var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
+            if (audioEventArgs.Disable)
+            {
+                isEnabled = false;
+                var filters = UnityEngine.Object.FindObjectsOfType<AudioMirrorFilter>();
+                foreach (var filter in filters)
+                {
+                    filter.enabled = isEnabled;
+                }
+            }
+            else
+            {
+                LoggerInstance.Msg("Changing audio device to " + audioEventArgs.DeviceNumber);
 
-        //    MelonLogger.Msg("Found " + players.Length + " speakers");
+                this.waveOutEvent = new WaveOutEvent() { DesiredLatency = 100, DeviceNumber = audioEventArgs.DeviceNumber, Volume = pref_Volume };
+                this.waveOutEvent.Init(this.globalMixer);
+                isEnabled = true;
 
-        //    foreach (var player in players)
-        //    {
-        //        AudioSource source = player.GetComponent<AudioSource>();
+                // clear all buffers to remove any delay that could be caused by the switch
+                var filters = UnityEngine.Object.FindObjectsOfType<AudioMirrorFilter>();
+                foreach (var filter in filters)
+                {
+                    filter.ClearBuffer();
+                    filter.enabled = isEnabled;
+                }
 
-        //        if (source != null && source.gameObject != null)
-        //        {
-        //            MelonLogger.Msg("Found AudioSource, adding MirrorFilter to parent GameObject");
-        //            source.gameObject.AddComponent<AudioMirrorFilter>();
-        //        }
-        //    }
-        //}
+                this.waveOutEvent.Play();
+            }
+        }
+
+        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+        {
+
+        }
 
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)
         {
             this.mirroredObjectIds = new HashSet<int>();
-            //this.audioSources = new List<AudioSource>();
+            this.ticksSinceLastUpdate = 0;
+            this.getPlayerRetries = 0;
+        }
 
-            //MelonLogger.Msg("Scene " + buildIndex + " was INITIALIZED with name " + sceneName);
-            //var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
+        public void EnableAllFilters(bool enabled)
+        {
+            var filters = UnityEngine.Object.FindObjectsOfType<AudioMirrorFilter>();
 
-            //MelonLogger.Msg("Found " + players.Length + " speakers");
+            LoggerInstance.Msg("Found " + filters.Count + " filters to enable/disable");
 
-            //foreach (var player in players)
-            //{
-            //    AudioSource source = player.GetComponent<AudioSource>();
-
-            //    if (source != null && source.gameObject != null)
-            //    {
-            //        MelonLogger.Msg("Found AudioSource");
-            //        this.audioSources.Append(source);
-            //        //break;
-            //        //source.gameObject.AddComponent<AudioMirrorFilter>();
-            //    }
-            //}
-
-            //MelonLogger.Msg(this.audioSources);
+            foreach (var filter in filters)
+            {
+                filter.enabled = enabled;
+            }
         }
 
         public override void OnUpdate()
         {
             ticksSinceLastUpdate += 1;
 
-            if (ticksSinceLastUpdate == 90*5)
+            if ((getPlayerRetries < MAX_RETRIES && ticksSinceLastUpdate == 90) || (ticksSinceLastUpdate == 90 * 10))
             {
                 ticksSinceLastUpdate = 0;
+                getPlayerRetries += 1;
                 //this.audioSources = new List<AudioSource>();
 
                 var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
-                LoggerInstance.Msg("Found " + players.Length + " speakers");
+
+                if (getPlayerRetries < 10)
+                {
+                    LoggerInstance.Msg("Found " + players.Length + " speakers");
+                }
 
                 int count = 0;
 
@@ -142,54 +152,22 @@ namespace VRCPlayerAudioMirror
                     if (source != null && source.gameObject != null && source.isPlaying && !this.mirroredObjectIds.Contains(source.gameObject.GetInstanceID()))
                     {
                         LoggerInstance.Msg("Found AudioSource");
-                        //this.audioSources.Add(source);
-                        //break;
-                        source.gameObject.AddComponent<AudioMirrorFilter>();
+
+                        var filter = source.gameObject.AddComponent<AudioMirrorFilter>();
+                        filter.SetParentMixer(globalMixer);
+                        filter.enabled = isEnabled;
+
                         this.mirroredObjectIds.Add(source.gameObject.GetInstanceID());
                         count += 1;
-                        
+                        getPlayerRetries = MAX_RETRIES; // if we're successful once just go into slow update mode directly
                     }
                 }
 
-                //MelonLogger.Msg("Updated " + this.audioSources.Count + " audio sources");
-                LoggerInstance.Msg("Updated " + count + " audio sources");
-            }
-
-            if (Input.GetKey(KeyCode.L))
-            {
-                var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
-                foreach (var player in players)
+                if (getPlayerRetries < 10 || count > 0)
                 {
-                    AudioMirrorFilter mirrorFilter = player.GetComponent<AudioMirrorFilter>();
-
-                    if (mirrorFilter != null)
-                    {
-                        mirrorFilter.FinishWav();
-                    }
+                    LoggerInstance.Msg("Updated " + count + " audio sources");
                 }
             }
         }
-
-        //public override void OnFixedUpdate()
-        //{
-        //    //MelonLogger.Msg("OnFidexUpdate, " + this.audioSources);
-
-        //    if (this.audioSources == null) return;
-
-        //    //var players = UnityEngine.Object.FindObjectsOfType<VRC.SDK3.Video.Components.AVPro.VRCAVProVideoSpeaker>();
-
-        //    //foreach (var player in players)
-        //    //{
-        //    //    AudioSource source = player.GetComponent<AudioSource>();
-
-        //    foreach (var source in this.audioSources)
-        //    { 
-        //        if (source.isPlaying)
-        //        {
-        //            float[] audioData = source.GetOutputData(1024, 0);
-        //            MelonLogger.Msg("Got " + audioData.Length + " samples with audioData[0] = " + audioData[0]);
-        //        }
-        //    }
-        //}
     }
 }
