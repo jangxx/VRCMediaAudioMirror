@@ -15,6 +15,21 @@ The main purpose of this mod (for me) was to make my Woojer Vest finally usable 
 
 4. Put MediaAudioMirror.dll into the _Mods/_ folder within the VRChat directory.
 
+## Working principle
+
+Normally, the audio from a media players traverses Unity something like this:
+
+![Non-mirrored audio diagram](github/diagram_nonmirrored.png)
+
+The mod injects a custom audio filter into each GameObject that has a media player and captures the audio directly in `OnAudioFilterRead`.
+This also means that the extraction happens directly in the audio thread and is therefore not subject to glitches caused by a changing framerate or other stuttering.
+From there it is fed into a `BufferedWaveProvider`, aggregated in a custom `MixingWaveProvider` and then sent out to the other speaker.
+This whole pipeline adds almost zero delay, since the audio samples enter it even before they are seen by the rest of the Unity audio system.
+The filter is also responsible for the optional delay feature, which is accomplished by simply storing a number of audio samples in a ringbuffer.
+Because the filter is executed before Unity processes the audio, this kind of delaying is possible. 
+
+![Mirrored audio diagram](github/diagram_mirrored.png)
+
 ## Usage
 
 The mod puts two button into the quick menu **Audio Mirror Setup** and **Audio Mirror Status**.
@@ -41,3 +56,11 @@ These can (and probably will) include AudioSources that are not media players bu
 Finally, the _Unhook All_ button can be used to reset all attached filters in case you're not happy with the results of the _Retry hooking_ function.
 
 ![Audio Mirror Status screenshot](github/Audio_Mirror_Status.png)
+
+## Settings
+
+The mod only has a few settings:
+
+- **Volume**: As the name implies, this sets the output volume of the mod to the selected output device from 0.0 to 1.0. This setting does not bypass the volume set in Windows for the audio device, so make sure to set that to an appropriate value as well.
+
+- **Added delay to non mirrored audio**: Setting this to anything higher than 0 will add a delay within the audio filter that is applied after the audio is mirrored. This effectively allows you to have the mirrored audio device receive audio earlier than the rest of the game. Do note however that this has no effect on video, so if you use this option the audio played in-game will not be in sync with a video from the same player anymore.
