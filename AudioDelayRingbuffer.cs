@@ -24,8 +24,6 @@ namespace VRCMediaAudioMirror
         {
             if (data.Length > audioBuffer.Length) return;
 
-            //LoggerInstance.Msg("Add " + data.Length + " samples, bP = " + bufferPointer);
-
             for (int i = 0; i < data.Length; i++)
             {
                 audioBuffer[bufferPointer] = data[i];
@@ -37,16 +35,6 @@ namespace VRCMediaAudioMirror
 
         public float RetrieveSample(int offset)
         {
-            //if (count > audioBuffer.Length) return; // cant provide this much data
-
-            //LoggerInstance.Msg("Retrieve " + count + " samples, bP = " + bufferPointer);
-
-            //for (int i = 0; i < count; i++)
-            //{
-            //    //output[i] = audioBuffer[(bufferPointer + i) % audioBuffer.Length];
-            //    output[i] = (float)(i % 255) / 512f;
-            //}
-
             samplesRead += 1;
 
             return audioBuffer[(bufferPointer + offset) % audioBuffer.Length];

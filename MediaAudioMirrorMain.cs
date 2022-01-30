@@ -82,6 +82,7 @@ namespace VRCMediaAudioMirror
             var new_pref_Delay = MelonPreferences.GetEntryValue<float>("PlayerAudioMirror", "Delay");
             if (new_pref_Delay != pref_Delay) // only do this whole dance if the delay actually changed
             {
+                new_pref_Delay = Math.Max(0, new_pref_Delay); // can't be negative obviously
                 UpdateAudioDelayBuffers(new_pref_Delay);
             }
             pref_Delay = new_pref_Delay;
