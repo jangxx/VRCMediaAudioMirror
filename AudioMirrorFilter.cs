@@ -11,6 +11,7 @@ namespace VRCMediaAudioMirror
         private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("AudioMirrorFilter");
         private BufferedWaveProvider waveProvider;
         private MixingWaveProvider16 parentMixer;
+        private AudioDelayRingbuffer delayRingbuffer;
 
         private byte[] audioBuffer = new byte[2048 * 2];
 
@@ -25,6 +26,11 @@ namespace VRCMediaAudioMirror
             this.parentMixer = mixer;
             this.parentMixer.AddInputStream(waveProvider);
             LoggerInstance.Msg("Added filter to parent mixer");
+        }
+
+        public void SetDelayRingBuffer(AudioDelayRingbuffer ringbuffer)
+        {
+            this.delayRingbuffer = ringbuffer;
         }
 
         public void Start()
@@ -66,11 +72,26 @@ namespace VRCMediaAudioMirror
                 pcmIndex += 2;
             }
 
+            if (this.delayRingbuffer != null)
+            {
+                this.delayRingbuffer.AddSamples(data);
+
+                if (this.delayRingbuffer.HasSamples())
+                {
+                    // would be nice to use sth like Array.Copy here but the Il2CppStructArray<float> doesn't
+                    // seem like it wants to work with me on that :(
+                    for (int i = 0; i < data.Length; i++)
+                    {
+                        data[i] = this.delayRingbuffer.RetrieveSample(i);
+                    }
+                } // otherwise just leave the audio unchanged, i.e. add no delay
+            }
+
             try
             {
                 waveProvider.AddSamples(audioBuffer, 0, audioBuffer.Length);
             } 
-            catch (System.InvalidOperationException e)
+            catch (System.InvalidOperationException)
             {
                 waveProvider.ClearBuffer();
             }

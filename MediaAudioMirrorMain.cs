@@ -22,12 +22,13 @@ namespace VRCMediaAudioMirror
         // in the beginning were gonna try to get the player more frequently for a few attempts
         // and then drop the check frequency way down
         private int getPlayerRetries = 0;
-        private ISet<int> mirroredObjectIds = new HashSet<int>();
+        private ISet<GameObject> mirroredObjects = new HashSet<GameObject>();
 
         private WaveOutEvent waveOutEvent;
         private MixingWaveProvider16 globalMixer;
 
         private float pref_Volume = 1;
+        private float pref_Delay = 0;
         private bool isEnabled = false;
 
         private QuickMenuSettings settingsUi = new QuickMenuSettings();
@@ -52,6 +53,7 @@ namespace VRCMediaAudioMirror
 
             MelonPreferences.CreateCategory("PlayerAudioMirror", "Player Audio Mirror");
             MelonPreferences.CreateEntry<float>("PlayerAudioMirror", "Volume", 1f, "Volume (0.0-1.0)");
+            MelonPreferences.CreateEntry<float>("PlayerAudioMirror", "Delay", 0f, "Added delay to non mirrored audio (s)");
 
             this.settingsUi.AudioDeviceChangedEvent += OnAudioDeviceChanged;
             this.settingsUi.MenuInteractionEvent += OnMenuInteraction;
@@ -64,7 +66,7 @@ namespace VRCMediaAudioMirror
 
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)
         {
-            this.mirroredObjectIds = new HashSet<int>();
+            this.mirroredObjects = new HashSet<GameObject>();
             this.ticksSinceLastUpdate = 0;
             this.getPlayerRetries = 0;
         }
@@ -76,6 +78,13 @@ namespace VRCMediaAudioMirror
             {
                 this.waveOutEvent.Volume = Math.Max(0, Math.Min(1, pref_Volume));
             }
+
+            var new_pref_Delay = MelonPreferences.GetEntryValue<float>("PlayerAudioMirror", "Delay");
+            if (new_pref_Delay != pref_Delay) // only do this whole dance if the delay actually changed
+            {
+                UpdateAudioDelayBuffers(new_pref_Delay);
+            }
+            pref_Delay = new_pref_Delay;
         }
 
         public void OnAudioDeviceChanged(object sender, EventArgs args)
@@ -156,8 +165,8 @@ namespace VRCMediaAudioMirror
                 UnityEngine.Object.Destroy(filter);
             }
 
-            this.mirroredObjectIds = new HashSet<int>();
-            settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjectIds.Count });
+            this.mirroredObjects = new HashSet<GameObject>();
+            settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjects.Count });
         }
 
         public override void OnUpdate()
@@ -173,6 +182,31 @@ namespace VRCMediaAudioMirror
                 if (count > 0)
                 {
                     getPlayerRetries = MAX_RETRIES; // if we're successful once finish the initial updating phase
+                }
+            }
+        }
+
+        public void UpdateAudioDelayBuffers(float new_delay)
+        {
+            foreach (var go in this.mirroredObjects)
+            {
+                AudioMirrorFilter audioMirrorFilter = go.GetComponent<AudioMirrorFilter>();
+
+                if (audioMirrorFilter != null)
+                {
+                    UnityEngine.Object.Destroy(audioMirrorFilter);
+
+                    var filter = go.AddComponent<AudioMirrorFilter>();
+                    filter.SetParentMixer(this.globalMixer);
+
+                    if (new_delay > 0)
+                    {
+                        filter.SetDelayRingBuffer(new AudioDelayRingbuffer((int)(48000 * new_delay), 2));
+                    }
+
+                    filter.enabled = isEnabled;
+
+                    LoggerInstance.Msg("Recreated mirror filter on GameObject " + go.GetInstanceID());
                 }
             }
         }
@@ -230,15 +264,21 @@ namespace VRCMediaAudioMirror
                     && (source.isPlaying || hookEverything) // hook everything means we also attach to non-playing sources
                     && source.outputAudioMixerGroup != null
                     && source.outputAudioMixerGroup.name == "World"
-                    && !this.mirroredObjectIds.Contains(source.gameObject.GetInstanceID()))
+                    && !this.mirroredObjects.Contains(source.gameObject))
                 {
                     LoggerInstance.Msg("Found AudioSource");
 
                     var filter = source.gameObject.AddComponent<AudioMirrorFilter>();
                     filter.SetParentMixer(this.globalMixer);
+
+                    if (pref_Delay > 0)
+                    {
+                        filter.SetDelayRingBuffer(new AudioDelayRingbuffer((int)(48000 * pref_Delay), 2));
+                    }
+
                     filter.enabled = isEnabled;
 
-                    this.mirroredObjectIds.Add(source.gameObject.GetInstanceID());
+                    this.mirroredObjects.Add(source.gameObject);
                     count += 1;
                 }
             }
@@ -248,7 +288,7 @@ namespace VRCMediaAudioMirror
                 LoggerInstance.Msg("Updated " + count + " audio sources");
             }
 
-            settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjectIds.Count });
+            settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjects.Count });
 
             return count;
         }
