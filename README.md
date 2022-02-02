@@ -64,3 +64,8 @@ The mod only has a few settings:
 - **Volume**: As the name implies, this sets the output volume of the mod to the selected output device from 0.0 to 1.0. This setting does not bypass the volume set in Windows for the audio device, so make sure to set that to an appropriate value as well.
 
 - **Added delay to non mirrored audio**: Setting this to anything higher than 0 will add a delay within the audio filter that is applied after the audio is mirrored. This effectively allows you to have the mirrored audio device receive audio earlier than the rest of the game. Do note however that this has no effect on video, so if you use this option the audio played in-game will not be in sync with a video from the same player anymore.
+
+## Additional Info
+
+This mod uses the [NAudio](https://github.com/naudio/NAudio/tree/v1.10.0) library in version 1.10.0 which is released under the Ms-PL.
+If you want to build it yourself, look at its repo for more information.
