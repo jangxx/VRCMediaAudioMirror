@@ -53,7 +53,12 @@ If the number is still 0 and no audio is playing you can try the nuclear option 
 This will make the *Retry hooking* button look for all AudioSources in the world that are playing (`isPlaying = true`) and that are feeding audio into the world mixer (i.e. they are controlled by the world volume slider).
 These can (and probably will) include AudioSources that are not media players but sound effects for example though, so disabling this filter should really only be a last ditch attempt if everything else fails.
 
-Finally, the _Unhook All_ button can be used to reset all attached filters in case you're not happy with the results of the _Retry hooking_ function.
+The _Unhook All_ button can be used to reset all attached filters in case you're not happy with the results of the _Retry hooking_ function.
+
+Finally, the _(Allow Multiple Inputs)_ toggle is used to control whether or not the global mixer (MixingWaveProvider16) will accept audio from multiple inputs at once.
+This option got added after I found out that some VRC clubs use multiple AudioSources playing the same audio for spatial audio, which caused the mixed signal to be way louder than it should've been (sometimes it even started to clip).
+To avoid this problem, the mixer was changed to only accept samples from the first input that provides them.
+It is possible that there are worlds out there which require multiple AudioSources playing different audio at the same time however, so the option was added to temporarily enable the old behavior again.
 
 ![Audio Mirror Status screenshot](github/Audio_Mirror_Status.png)
 
