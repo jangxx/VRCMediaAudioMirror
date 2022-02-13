@@ -8,7 +8,7 @@ namespace VRCMediaAudioMirror
 {
     public class AudioMirrorFilter : MonoBehaviour
     {
-        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("AudioMirrorFilter");
+        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("VRCMediaAudioMirror::AudioMirrorFilter");
         private BufferedWaveProvider waveProvider;
         private MixingWaveProvider16 parentMixer;
         private AudioDelayRingbuffer delayRingbuffer;
@@ -71,6 +71,8 @@ namespace VRCMediaAudioMirror
                 sampleIndex++;
                 pcmIndex += 2;
             }
+
+            //LoggerInstance.Msg(this.GetInstanceID() + " - " + data[0]);
 
             if (this.delayRingbuffer != null)
             {

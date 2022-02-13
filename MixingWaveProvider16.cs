@@ -16,7 +16,8 @@ namespace VRCMediaAudioMirror
         private List<IWaveProvider> inputs;
         private WaveFormat waveFormat;
         private int bytesPerSample;
-        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("MixingWaveProvider16");
+        private bool allowMultipleInputs = false; // do we _actually_ allow multiple inputs to send data? if set to false we only take samples from the first input that supplies them and discard the rest
+        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("VRCMediaAudioMirror::MixingWaveProvider16");
 
         public MixingWaveProvider16()
         {
@@ -51,6 +52,23 @@ namespace VRCMediaAudioMirror
             }
         }
 
+        public void SetAllowMultipleInputs(bool value)
+        {
+            lock (inputs)
+            {
+                this.allowMultipleInputs = value;
+            }
+
+            //if (value)
+            //{
+            //    LoggerInstance.Msg("Allowing multiple inputs");
+            //} 
+            //else
+            //{
+            //    LoggerInstance.Msg("Not allowing multiple inputs");
+            //}
+        }
+
         public void RemoveInputStream(IWaveProvider waveProvider)
         {
             lock (inputs)
@@ -67,7 +85,9 @@ namespace VRCMediaAudioMirror
         public int Read(byte[] buffer, int offset, int count)
         {
             if (count % bytesPerSample != 0)
+            {
                 throw new ArgumentException("Must read an whole number of samples", "count");
+            }
 
             // blank the buffer
             Array.Clear(buffer, offset, count);
@@ -79,14 +99,26 @@ namespace VRCMediaAudioMirror
             byte[] readBuffer = new byte[count];
             lock (inputs)
             {
+                bool alreadyGotSamples = false;
+
                 foreach (var input in inputs)
                 {
                     int readFromThisStream = input.Read(readBuffer, 0, count);
+
+                    bool containsData = false;
+
+                    // skip the data check if we allow multiple inputs anyway
+                    if (!allowMultipleInputs)
+                    {
+                        containsData = !IsAllZero(readBuffer);
+                    }
+
                     // don't worry if input stream returns less than we requested - may indicate we have got to the end
                     bytesRead = Math.Max(bytesRead, readFromThisStream);
-                    if (readFromThisStream > 0)
+                    if (readFromThisStream > 0 && (allowMultipleInputs || (containsData && !alreadyGotSamples)))
                     {
                         Sum16BitAudio(buffer, offset, readBuffer, readFromThisStream);
+                        alreadyGotSamples = true;
                     }
                 }
             }
@@ -130,6 +162,15 @@ namespace VRCMediaAudioMirror
         static short ClampToShort(int input)
         {
             return (short)Math.Max(short.MinValue, Math.Min(short.MaxValue, input));
+        }
+
+        static bool IsAllZero(byte[] buffer)
+        {
+            foreach (byte b in buffer)
+            {
+                if (b != 0) return false;
+            }
+            return true;
         }
 
         public WaveFormat WaveFormat

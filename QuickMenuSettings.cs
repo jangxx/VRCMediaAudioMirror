@@ -28,6 +28,7 @@ namespace VRCMediaAudioMirror
         {
             TRIGGER_UPDATE,
             UNHOOK_ALL,
+            CHANGE_SETTING,
         };
 
         public MenuInteractionType Type { get; set; }
@@ -48,6 +49,7 @@ namespace VRCMediaAudioMirror
         private ICustomShowableLayoutedMenu statusMenu;
 
         private bool statusMenu_filterDisabled = false;
+        private bool statusMenu_allowMultipleInputs = false;
 
         public void Init()
         {
@@ -114,7 +116,23 @@ namespace VRCMediaAudioMirror
                 handler?.Invoke(this, args);
             });
 
+            statusMenu.AddToggleButton("(Allow Multiple Inputs)", (setting) => {
+                statusMenu_allowMultipleInputs = setting;
+
+                LoggerInstance.Msg("Setting allow multiple inputs: " + setting);
+                var args = new MenuInteractionEventArgs();
+                args.Type = MenuInteractionEventArgs.MenuInteractionType.CHANGE_SETTING;
+
+                args.BoolParams = new bool[] { statusMenu_allowMultipleInputs };
+                args.IntParams = new int[] { 1 };
+
+                EventHandler handler = MenuInteractionEvent;
+                handler?.Invoke(this, args);
+            }, () => statusMenu_allowMultipleInputs);
+
             statusMenu.AddSpacer();
+            statusMenu.AddSpacer();
+
             statusMenu.AddSimpleButton("Close", () =>
             {
                 statusMenu.Hide();

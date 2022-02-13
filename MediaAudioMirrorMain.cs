@@ -22,7 +22,7 @@ namespace VRCMediaAudioMirror
         // in the beginning were gonna try to get the player more frequently for a few attempts
         // and then drop the check frequency way down
         private int getPlayerRetries = 0;
-        private ISet<GameObject> mirroredObjects = new HashSet<GameObject>();
+        private List<GameObject> mirroredObjects = new List<GameObject>();
 
         private WaveOutEvent waveOutEvent;
         private MixingWaveProvider16 globalMixer;
@@ -66,7 +66,7 @@ namespace VRCMediaAudioMirror
 
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)
         {
-            this.mirroredObjects = new HashSet<GameObject>();
+            this.mirroredObjects = new List<GameObject>();
             this.ticksSinceLastUpdate = 0;
             this.getPlayerRetries = 0;
         }
@@ -140,6 +140,15 @@ namespace VRCMediaAudioMirror
                 case MenuInteractionEventArgs.MenuInteractionType.UNHOOK_ALL:
                     DestroyAllFilters();
                     break;
+
+                case MenuInteractionEventArgs.MenuInteractionType.CHANGE_SETTING:
+                    switch (menuEventArgs.IntParams[0])
+                    {
+                        case 1: // setting "allow multiple inputs"
+                            globalMixer.SetAllowMultipleInputs(menuEventArgs.BoolParams[0]);
+                            break;
+                    }
+                    break;
             }
         }
 
@@ -166,7 +175,7 @@ namespace VRCMediaAudioMirror
                 UnityEngine.Object.Destroy(filter);
             }
 
-            this.mirroredObjects = new HashSet<GameObject>();
+            this.mirroredObjects = new List<GameObject>();
             settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjects.Count });
         }
 
@@ -265,7 +274,7 @@ namespace VRCMediaAudioMirror
                     && (source.isPlaying || hookEverything) // hook everything means we also attach to non-playing sources
                     && source.outputAudioMixerGroup != null
                     && source.outputAudioMixerGroup.name == "World"
-                    && !this.mirroredObjects.Contains(source.gameObject))
+                    && !GameObjectInList(this.mirroredObjects, source.gameObject))
                 {
                     LoggerInstance.Msg("Found AudioSource");
 
@@ -278,6 +287,7 @@ namespace VRCMediaAudioMirror
                     }
 
                     filter.enabled = isEnabled;
+                    source.bypassEffects = false; // otherwise we can't do anything with the audio data
 
                     this.mirroredObjects.Add(source.gameObject);
                     count += 1;
@@ -292,6 +302,15 @@ namespace VRCMediaAudioMirror
             settingsUi.UpdateStatusMenuStatus(new StatusMenuStatus() { CurrentlyHooked = this.mirroredObjects.Count });
 
             return count;
+        }
+
+        static bool GameObjectInList(List<GameObject> haystack, GameObject needle)
+        {
+            foreach(var go in haystack)
+            {
+                if (go.GetInstanceID() == needle.GetInstanceID()) return true;
+            }
+            return false;
         }
     }
 }

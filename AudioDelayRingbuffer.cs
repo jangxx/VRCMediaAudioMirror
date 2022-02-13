@@ -13,7 +13,7 @@ namespace VRCMediaAudioMirror
         private int bufferPointer = 0;
         private long samplesWritten = 0;
         private long samplesRead = 0;
-        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("AudioDelayRingbuffer");
+        private MelonLogger.Instance LoggerInstance = new MelonLogger.Instance("VRCMediaAudioMirror::AudioDelayRingbuffer");
 
         public AudioDelayRingbuffer(int sizeInSamples, int channels)
         {
