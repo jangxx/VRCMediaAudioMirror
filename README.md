@@ -11,9 +11,7 @@ The main purpose of this mod (for me) was to make my Woojer Vest finally usable 
 
 2. Go to the [releases](https://github.com/jangxx/VRCMediaAudioMirror/releases) section and download the latest release.
 
-3. Put NAudio.dll from _UserLibs/_ into the _UserLibs/_ folder within the VRChat directory.
-
-4. Put MediaAudioMirror.dll into the _Mods/_ folder within the VRChat directory.
+3. Put MediaAudioMirror.dll into the _Mods/_ folder within the VRChat directory.
 
 ## Working principle
 
@@ -74,3 +72,5 @@ The mod only has a few settings:
 
 This mod uses the [NAudio](https://github.com/naudio/NAudio/tree/v1.10.0) library in version 1.10.0 which is released under the Ms-PL.
 If you want to build it yourself, look at its repo for more information.
+
+This mod uses [ILMerge](https://github.com/dotnet/ILMerge) at build time to merge this mod and NAudio into a single dll as required by vrcmg guidelines
